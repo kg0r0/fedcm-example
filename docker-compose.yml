@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+  rp:
+    build: ./rp
+    ports:
+      - 8001:8001
+  idp:
+    build: ./idp
+    ports:
+      - 8002:8002

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>FedCM Example - IdP</title>
+</head>
+
+<body>
+  <h1>FedCM Example - IdP</h1>
+  <div>
+    <label for="username">Username:</label><br>
+    <input type="text" id="username" value="John"><br>
+  </div>
+  <div>
+    <label for="pass">Password:</label><br>
+    <input type="password" id="password" value="password"><br>
+  </div>
+  <button type="submit" id="sign-in" onclick="signIn()">sign-in</button>
+  <script>
+    async function signIn() {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+      const resp = await fetch('/signin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          username,
+          password
+        })
+      });
+      if (resp.status == 200) {
+        // Call navigator.login.setStatus() to notify the user agent that the user has successfully logged in.
+        // Ref: https://developers.google.com/privacy-sandbox/blog/fedcm-chrome-120-updates
+        navigator.login.setStatus("logged-in");
+        window.IdentityProvider.close();
+        return;
+      }
+    }
+  </script>
+</body>
+
+</html>

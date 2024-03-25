@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>FedCM Example - RP</title>
+</head>
+
+<body>
+  <h1>FedCM Example - RP</h1>
+  <button type="submit" id="sign-in" onclick="signIn()">sign-in</button>
+  <div id="token"></div>
+</body>
+<script>
+  async function signIn() {
+    // Invoke the API with the mode parameter like so:
+    // Ref: https://developers.google.com/privacy-sandbox/blog/fedcm-chrome-125-updates
+    const resp = await navigator.credentials.get({
+      identity: {
+        providers: [
+          {
+            configURL: "http://localhost:8002/config.json",
+            clientId: "123",
+            nonce: "456",
+          }
+        ],
+        mode: "button"
+      },
+      mediation: 'optional',
+    }).catch(console.error);
+    const { token } = resp;
+    document.getElementById("token").innerText = `TOKEN: ${token}`;
+  }
+</script>
+
+</html>
