@@ -7,9 +7,36 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/jwt"
+	"github.com/lestrrat-go/jwx/jwt/openid"
+)
+
+const (
+	// keypair is a sample EC keypair in JWK format generated using mkjwk.
+	// Ref: https://mkjwk.org/
+	keypair = `{
+	"kty": "EC",
+	"d": "ogl9G1lkjDLbVYM88mabWKCt9fl-WRm6vkhCMcpPL-c",
+	"use": "sig",
+	"crv": "P-256",
+	"kid": "Xb_CIHvm4fa322Vye6gOiwpJyFNYz-rOWDnjcs4YITA",
+	"x": "yViLxvCf8rAAlJYwZ4Nl6iGShsUBLCo9xhbdm7N58oI",
+	"y": "yFNSVqODrc6Mvjc8zTu5LSn1eAUTRKHBER8n4Exlpbg",
+	"alg": "ES256"
+}`
+	// Information about the IdP.
+	issuer = "http://localhost:8002"
+
+	// Information about the RP.
+	accountID = "1234"
+	clientID  = "123"
+	origin    = "http://localhost:8001"
 )
 
 var store = sessions.NewCookieStore([]byte("secret"))
@@ -69,12 +96,12 @@ func fedcmAssertionHandler(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, map[string]map[string]string{"error": {"code": "access_denied", "url": "http://localhost:8002?type=access_denied"}}, http.StatusBadRequest)
 		return
 	}
-	if r.Header.Get("Origin") != "http://localhost:8001" || r.FormValue("client_id") != "123" {
+	if r.Header.Get("Origin") != origin || r.FormValue("client_id") != clientID {
 		slog.Info("Invalid request", "origin", r.Header.Get("Origin"), "client_id", r.FormValue("client_id"))
 		jsonResponse(w, map[string]map[string]string{"error": {"code": "access_denied", "url": "http://localhost:8002?type=access_denied"}}, http.StatusBadRequest)
 		return
 	}
-	if r.FormValue("account_id") != "1234" {
+	if r.FormValue("account_id") != accountID {
 		slog.Info("Invalid request", "account_id", r.FormValue("account_id"))
 		jsonResponse(w, map[string]map[string]string{"error": {"code": "access_denied", "url": "http://localhost:8002?type=access_denied"}}, http.StatusBadRequest)
 		return
@@ -85,8 +112,25 @@ func fedcmAssertionHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8001")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	// TODO: Implement the issuance of the assertion token using the account ID, client ID, issuer origin and nonce.
-	jsonResponse(w, map[string]string{"token": "***********"}, http.StatusOK)
+
+	// Issuance of the assertion token using the account ID, client ID, issuer origin and nonce.
+	key, err := jwk.ParseKey([]byte(keypair))
+	if err != nil {
+		jsonResponse(w, map[string]string{"error": "Error parsing key"}, http.StatusInternalServerError)
+		return
+	}
+	t := openid.New()
+	t.Set(jwt.IssuerKey, issuer)
+	t.Set(jwt.SubjectKey, accountID)
+	t.Set(jwt.AudienceKey, clientID)
+	t.Set(jwt.IssuedAtKey, time.Now().Unix())
+	t.Set(`nonce`, r.FormValue("nonce"))
+	token, err := jwt.Sign(t, jwa.ES256, key)
+	if err != nil {
+		jsonResponse(w, map[string]string{"error": "Error signing token"}, http.StatusInternalServerError)
+		return
+	}
+	jsonResponse(w, map[string]string{"token": string(token)}, http.StatusOK)
 }
 
 // configJSONHandler implements the IdP config file endpoint.
