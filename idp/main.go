@@ -125,6 +125,7 @@ func fedcmAssertionHandler(w http.ResponseWriter, r *http.Request) {
 	t.Set(jwt.SubjectKey, accountID)
 	t.Set(jwt.AudienceKey, clientID)
 	t.Set(jwt.IssuedAtKey, time.Now().Unix())
+	t.Set(jwt.ExpirationKey, time.Now().Add(time.Minute).Unix())
 	t.Set(`nonce`, r.FormValue("nonce"))
 	token, err := jwt.Sign(t, jwa.ES256, key)
 	if err != nil {

@@ -29,6 +29,7 @@
       mediation: 'optional',
     }).catch(console.error);
     const { token } = resp;
+    // Note: This is demo code.The token should not be displayed to the browser. It should be verified by the RP.
     document.getElementById("result").innerText = `TOKEN: ${token}`;
   }
 
