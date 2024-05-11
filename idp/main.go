@@ -55,6 +55,7 @@ func main() {
 	r.HandleFunc("/accounts", sessionCheckMiddleware(accountsHandler)).Methods("GET")
 	r.HandleFunc("/metadata", clientMetadataHandler).Methods("GET")
 	r.HandleFunc("/.well-known/web-identity", webIdentityHandler).Methods("GET")
+	r.HandleFunc("/disconnect", disconnectHandler).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		slog.Info("Not found", "path", r.URL.Path)
 		http.Error(w, "Not found", http.StatusNotFound)
@@ -164,6 +165,36 @@ func clientMetadataHandler(w http.ResponseWriter, r *http.Request) {
 // Ref: https://developers.google.com/privacy-sandbox/blog/fedcm-chrome-120-updates
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "login.html", nil)
+}
+
+// disconnectHandler implements the disconnect endpoint.
+// Ref: https://developers.google.com/privacy-sandbox/blog/fedcm-chrome-122-updates
+func disconnectHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Sec-Fetch-Dest") != "webidentity" {
+		jsonResponse(w, map[string]string{"error": "Invalid request"}, http.StatusBadRequest)
+		return
+	}
+	if r.Header.Get("Origin") != origin || r.FormValue("client_id") != clientID {
+		slog.Info("Invalid request", "origin", r.Header.Get("Origin"), "client_id", r.FormValue("client_id"))
+		jsonResponse(w, map[string]map[string]string{"error": {"code": "access_denied", "url": "http://localhost:8002?type=access_denied"}}, http.StatusBadRequest)
+		return
+	}
+	if r.FormValue("account_hint") != "" {
+		slog.Info("Received account hint", "account_hint", r.FormValue("account_hint"))
+	}
+	sess, _ := store.Get(r, "session")
+	sess.Values["status"] = "logged-out"
+	err := sess.Save(r, w)
+	if err != nil {
+		slog.Error("Error saving session", "error", err)
+		jsonResponse(w, map[string]string{"error": "Error saving session"}, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8001")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+
+	jsonResponse(w, map[string]string{"account_id": accountID}, http.StatusOK)
 }
 
 func signInHandler(w http.ResponseWriter, r *http.Request) {

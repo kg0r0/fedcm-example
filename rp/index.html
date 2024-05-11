@@ -8,7 +8,8 @@
 <body>
   <h1>FedCM Example - RP</h1>
   <button type="submit" id="sign-in" onclick="signIn()">Sign-in with IdP</button>
-  <div id="token"></div>
+  <button type="submit" id="sign-in" onclick="disconnect()">Disconnect</button>
+  <div id="result"></div>
 </body>
 <script>
   async function signIn() {
@@ -28,7 +29,18 @@
       mediation: 'optional',
     }).catch(console.error);
     const { token } = resp;
-    document.getElementById("token").innerText = `TOKEN: ${token}`;
+    document.getElementById("result").innerText = `TOKEN: ${token}`;
+  }
+
+  // Disconnect an IdP account "1234" from the RP "https://idp.com/". This is invoked on the RP domain.
+  // Ref: https://developers.google.com/privacy-sandbox/blog/fedcm-chrome-122-updates
+  async function disconnect() {
+    await IdentityCredential.disconnect({
+      configURL: "http://localhost:8002/config.json",
+      clientId: "123",
+      accountHint: "1234"
+    }).catch(console.error);
+    document.getElementById("result").innerText = `Disconnected`;
   }
 </script>
 
