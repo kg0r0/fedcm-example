@@ -1,8 +1,8 @@
 # fedcm-example
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)  
 Experimental implementation of FedCM in Go  
-This simple implementation provides for developers to try out Button FedCM in their local environment.  
-:construction: **Note: This is not ready for production. It can be used only to test the behavior.** :construction:
+:construction: **Note: This is not ready for production. It can be used only to test the behavior.** :construction:  
+This simple implementation provides for developers to try out FedCM in their local environment.  
 
 ## Prerequisites
 
